@@ -8,6 +8,7 @@ import android.graphics.BitmapFactory;
 import android.location.Address;
 import android.location.Geocoder;
 import android.location.Location;
+import android.location.LocationManager;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
@@ -35,10 +36,12 @@ import com.example.locationcamera.utils.ImageUtils;
 import com.example.locationcamera.utils.WatermarkUtils;
 import com.example.locationcamera.utils.PhotoMetadataUtils;
 import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationAvailability;
 import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.location.Priority;
 import com.google.common.util.concurrent.ListenableFuture;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -359,14 +362,8 @@ public class CameraFragment extends Fragment {
         }
     }
 
-    // Inside takePhoto()
     private void takePhoto() {
         try {
-            // Simulate location refresh button click
-            if (binding != null && binding.refreshLocationButton != null) {
-                binding.refreshLocationButton.performClick();
-            }
-
             if (!hasCameraPermission()) {
                 showError("Camera permission required");
                 return;
@@ -433,7 +430,6 @@ public class CameraFragment extends Fragment {
             resetCaptureState();
         }
     }
-
 
     private void resetCaptureState() {
         if (!isFragmentActive) return;
@@ -525,7 +521,8 @@ public class CameraFragment extends Fragment {
                             currentLocation.getLatitude(),
                             currentLocation.getLongitude(),
                             address,
-                            System.currentTimeMillis()
+                            System.currentTimeMillis(),
+                            currentLocation
                     );
                     Log.d(TAG, "Location metadata saved to photo: " + metadataSuccess);
                 } else {
@@ -546,7 +543,6 @@ public class CameraFragment extends Fragment {
             }
         }).start();
     }
-
 
     private void saveWatermarkedPhoto(Bitmap watermarkedBitmap, String photoPath) throws Exception {
         FileOutputStream out = null;
@@ -617,13 +613,15 @@ public class CameraFragment extends Fragment {
         }
 
         try {
-            updateLocationStatus("Getting GPS location...", R.color.orange);
+            updateLocationStatus("Getting location...", R.color.orange);
 
-            LocationRequest locationRequest = LocationRequest.create();
-            locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY); // Forces GPS
-            locationRequest.setInterval(0); // Single update
-            locationRequest.setFastestInterval(0);
-            locationRequest.setNumUpdates(1); // Only one update to save battery
+            // Request high-accuracy satellite-based location using new API
+            LocationRequest locationRequest = new LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 1000)
+                    .setWaitForAccurateLocation(false)
+                    .setMinUpdateIntervalMillis(500)
+                    .setMaxUpdateDelayMillis(15000)
+                    .setMaxUpdates(1)
+                    .build();
 
             LocationCallback locationCallback = new LocationCallback() {
                 @Override
@@ -633,38 +631,68 @@ public class CameraFragment extends Fragment {
                     Location location = locationResult.getLastLocation();
                     if (location != null) {
                         currentLocation = location;
-                        String locationText = String.format(Locale.US, "%.6f, %.6f",
-                                location.getLatitude(), location.getLongitude());
-                        updateLocationStatus(locationText, R.color.green);
 
-                        Log.d(TAG, "GPS Location obtained: " + locationText);
+                        // Check if location is from GPS/satellite
+                        String provider = location.getProvider();
+                        boolean isGPS = LocationManager.GPS_PROVIDER.equals(provider);
+
+                        String locationText = String.format(Locale.US, "%.6f, %.6f %s",
+                                location.getLatitude(), location.getLongitude(),
+                                isGPS ? "(GPS)" : "(" + provider + ")");
+                        updateLocationStatus(locationText, isGPS ? R.color.green : R.color.orange);
+
+                        Log.d(TAG, "Location obtained from " + provider + ": " + locationText +
+                                ", Accuracy: " + location.getAccuracy() + "m");
 
                         // Get address in background
                         new Thread(() -> {
                             String address = getAddressFromLocation(location.getLatitude(), location.getLongitude());
                             if (!address.isEmpty() && isFragmentActive) {
                                 mainHandler.post(() -> {
-                                    updateLocationStatus(address, R.color.green);
+                                    String statusText = address + (isGPS ? " (GPS)" : " (" + provider + ")");
+                                    updateLocationStatus(statusText, isGPS ? R.color.green : R.color.orange);
                                 });
                             }
                         }).start();
                     } else {
-                        updateLocationStatus("Location unavailable", R.color.red);
-                        Log.w(TAG, "GPS location is null");
+                        updateLocationStatus("Satellite location unavailable", R.color.red);
+                        Log.w(TAG, "Location is null from satellite request");
                     }
+                }
 
-                    // Stop location updates after one fix
-                    fusedLocationClient.removeLocationUpdates(this);
+                @Override
+                public void onLocationAvailability(LocationAvailability locationAvailability) {
+                    if (!isFragmentActive) return;
+
+                    if (!locationAvailability.isLocationAvailable()) {
+                        updateLocationStatus("GPS satellites not available", R.color.red);
+                        Log.w(TAG, "GPS satellites not available");
+                    }
                 }
             };
 
-            fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, Looper.getMainLooper());
+            // Request location updates with high accuracy
+            if (ActivityCompat.checkSelfPermission(requireContext(), Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+                fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, Looper.getMainLooper())
+                        .addOnFailureListener(new com.google.android.gms.tasks.OnFailureListener() {
+                            @Override
+                            public void onFailure(@NonNull Exception e) {
+                                if (!isFragmentActive) return;
+                                Log.e(TAG, "Error requesting satellite location", e);
+                                updateLocationStatus("Satellite location error", R.color.red);
+                            }
+                        });
+            } else {
+                updateLocationStatus("Location permission not granted", R.color.red);
+                Log.e(TAG, "Location permission not granted when requesting updates");
+            }
 
         } catch (Exception e) {
             Log.e(TAG, "Error in getCurrentLocation", e);
-            updateLocationStatus("Location service error", R.color.red);
+            updateLocationStatus("Satellite location service error", R.color.red);
         }
     }
+
     private void updateLocationStatus(String text, int colorRes) {
         if (!isFragmentActive) return;
 

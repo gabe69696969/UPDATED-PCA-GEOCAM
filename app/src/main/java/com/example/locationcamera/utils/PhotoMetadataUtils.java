@@ -4,6 +4,7 @@ import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.location.Location;
 import android.media.ExifInterface;
 import android.net.Uri;
 import android.os.Build;
@@ -25,13 +26,13 @@ public class PhotoMetadataUtils {
      */
     public static boolean savePhotoWithLocationMetadata(String photoPath, double latitude,
                                                         double longitude, String address,
-                                                        long timestamp) {
+                                                        long timestamp, Location location) {
         try {
             // First, add EXIF location data to the photo file
-            boolean exifSuccess = addLocationToExif(photoPath, latitude, longitude);
+            boolean exifSuccess = addLocationToExif(photoPath, latitude, longitude, location);
 
             // Create description with coordinates and timestamp
-            String description = createLocationDescription(latitude, longitude, address, timestamp);
+            String description = createLocationDescription(latitude, longitude, address, timestamp, location);
 
             // Add description to file metadata
             boolean descriptionSuccess = addDescriptionToFile(photoPath, description);
@@ -46,9 +47,18 @@ public class PhotoMetadataUtils {
     }
 
     /**
+     * Overloaded method for backward compatibility
+     */
+    public static boolean savePhotoWithLocationMetadata(String photoPath, double latitude,
+                                                        double longitude, String address,
+                                                        long timestamp) {
+        return savePhotoWithLocationMetadata(photoPath, latitude, longitude, address, timestamp, null);
+    }
+
+    /**
      * Adds GPS coordinates to EXIF data of the photo
      */
-    private static boolean addLocationToExif(String photoPath, double latitude, double longitude) {
+    private static boolean addLocationToExif(String photoPath, double latitude, double longitude, Location location) {
         try {
             ExifInterface exif = new ExifInterface(photoPath);
 
@@ -72,8 +82,28 @@ public class PhotoMetadataUtils {
 
             // Set additional GPS EXIF data
             exif.setAttribute(ExifInterface.TAG_GPS_PROCESSING_METHOD, "GPS");
-            exif.setAttribute(ExifInterface.TAG_GPS_TIMESTAMP, getCurrentTimeStamp());
-            exif.setAttribute(ExifInterface.TAG_GPS_DATESTAMP, getCurrentDateStamp());
+
+            // Use GPS time if available from location, otherwise current time
+            if (location != null) {
+                exif.setAttribute(ExifInterface.TAG_GPS_TIMESTAMP, getGPSTimeStamp(location));
+                exif.setAttribute(ExifInterface.TAG_GPS_DATESTAMP, getGPSDateStamp(location));
+
+                // Add GPS accuracy and provider information
+                if (location.hasAccuracy()) {
+                    // Store accuracy in GPS DOP (Dilution of Precision) field
+                    String accuracy = String.format(Locale.US, "%.2f", location.getAccuracy());
+                    exif.setAttribute(ExifInterface.TAG_GPS_DOP, accuracy);
+                }
+
+                // Add provider information to processing method
+                String provider = location.getProvider();
+                if (provider != null) {
+                    exif.setAttribute(ExifInterface.TAG_GPS_PROCESSING_METHOD, provider.toUpperCase());
+                }
+            } else {
+                exif.setAttribute(ExifInterface.TAG_GPS_TIMESTAMP, getCurrentTimeStamp());
+                exif.setAttribute(ExifInterface.TAG_GPS_DATESTAMP, getCurrentDateStamp());
+            }
 
             // Save EXIF data
             exif.saveAttributes();
@@ -105,25 +135,54 @@ public class PhotoMetadataUtils {
      * Creates a formatted description with location information
      */
     private static String createLocationDescription(double latitude, double longitude,
-                                                    String address, long timestamp) {
+                                                    String address, long timestamp, Location location) {
         StringBuilder description = new StringBuilder();
 
-        // Add timestamp
+        // Add timestamp - use GPS time if available
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
-        description.append("Captured: ").append(dateFormat.format(new Date(timestamp))).append("\n");
+        if (location != null && location.getTime() > 0) {
+            description.append("GPS Time: ").append(dateFormat.format(new Date(location.getTime()))).append("\n");
+            description.append("Captured: ").append(dateFormat.format(new Date(timestamp))).append("\n");
+        } else {
+            description.append("Captured: ").append(dateFormat.format(new Date(timestamp))).append("\n");
+        }
 
         // Add coordinates
         description.append("Coordinates: ").append(String.format(Locale.US, "%.6f, %.6f", latitude, longitude)).append("\n");
+
+        // Add GPS provider and accuracy information
+        if (location != null) {
+            String provider = location.getProvider();
+            if (provider != null) {
+                description.append("Source: ").append(provider.toUpperCase()).append("\n");
+            }
+
+            if (location.hasAccuracy()) {
+                description.append("Accuracy: ±").append(String.format(Locale.US, "%.1f", location.getAccuracy())).append("m\n");
+            }
+
+            if (location.hasAltitude()) {
+                description.append("Altitude: ").append(String.format(Locale.US, "%.1f", location.getAltitude())).append("m\n");
+            }
+        }
 
         // Add address if available
         if (address != null && !address.isEmpty() && !address.equals("Location unavailable")) {
             description.append("Location: ").append(address).append("\n");
         }
 
-        // Add accuracy note
-        description.append("GPS Location Data Embedded");
+        // Add final note
+        description.append("Satellite GPS Location Data Embedded");
 
         return description.toString();
+    }
+
+    /**
+     * Overloaded method for backward compatibility
+     */
+    private static String createLocationDescription(double latitude, double longitude,
+                                                    String address, long timestamp) {
+        return createLocationDescription(latitude, longitude, address, timestamp, null);
     }
 
     /**
@@ -259,16 +318,40 @@ public class PhotoMetadataUtils {
      * Gets current timestamp for EXIF
      */
     private static String getCurrentTimeStamp() {
+        // Use GPS time if available, otherwise system time
         SimpleDateFormat timeFormat = new SimpleDateFormat("HH:mm:ss", Locale.getDefault());
-        return timeFormat.format(new Date());
+        return timeFormat.format(new Date(System.currentTimeMillis()));
     }
 
     /**
      * Gets current date stamp for EXIF
      */
     private static String getCurrentDateStamp() {
+        // Use GPS time if available, otherwise system time
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy:MM:dd", Locale.getDefault());
-        return dateFormat.format(new Date());
+        return dateFormat.format(new Date(System.currentTimeMillis()));
+    }
+
+    /**
+     * Gets GPS-based timestamp if location has time information
+     */
+    private static String getGPSTimeStamp(Location location) {
+        if (location != null && location.getTime() > 0) {
+            SimpleDateFormat timeFormat = new SimpleDateFormat("HH:mm:ss", Locale.getDefault());
+            return timeFormat.format(new Date(location.getTime()));
+        }
+        return getCurrentTimeStamp();
+    }
+
+    /**
+     * Gets GPS-based date stamp if location has time information
+     */
+    private static String getGPSDateStamp(Location location) {
+        if (location != null && location.getTime() > 0) {
+            SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy:MM:dd", Locale.getDefault());
+            return dateFormat.format(new Date(location.getTime()));
+        }
+        return getCurrentDateStamp();
     }
 
     /**
