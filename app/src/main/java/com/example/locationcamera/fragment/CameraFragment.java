@@ -1,6 +1,7 @@
 package com.example.locationcamera.fragment;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
@@ -605,6 +606,7 @@ public class CameraFragment extends Fragment {
         }
     }
 
+    @SuppressLint("MissingPermission")
     private void getCurrentLocation() {
         if (!isFragmentActive) return;
 

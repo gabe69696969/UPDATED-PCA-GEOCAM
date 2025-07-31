@@ -57,7 +57,7 @@ public class WatermarkUtils {
             Paint textPaint = createTextPaint(textSize);
             Paint shadowPaint = createShadowPaint(textSize);
 
-            String[] watermarkLines = prepareWatermarkText(latitude, longitude, address, timestamp);
+            String[] watermarkLines = prepareWatermarkText(latitude, longitude, address, timestamp, altitude);
 
             Rect textBounds = new Rect();
             int maxTextWidth = 0;
@@ -149,7 +149,7 @@ public class WatermarkUtils {
     }
 
     private static String[] prepareWatermarkText(double latitude, double longitude,
-                                                 String address, long timestamp) {
+                                                 String address, long timestamp, Double altitude) {
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
         String dateTime = dateFormat.format(new Date(timestamp));
 
@@ -163,21 +163,26 @@ public class WatermarkUtils {
 
         String coordinates = String.format(Locale.US, "%.6f, %.6f", latitude, longitude);
 
+        // Add altitude if available
+        String coordinatesWithAltitude = coordinates;
+        if (altitude != null && altitude != 0) {
+            coordinatesWithAltitude = coordinates + String.format(Locale.US, " (%.0fm)", altitude);
+        }
+
         if (address != null && !address.isEmpty() && !address.equals("Location unavailable")) {
             return new String[]{
-                    "Philippine Coconut Authority",
                     dateTime,
-                    coordinates,
+                    coordinatesWithAltitude,
                     address
             };
         } else {
             return new String[]{
-                    "Philippine Coconut Authority",
                     dateTime,
-                    coordinates
+                    coordinatesWithAltitude
             };
         }
     }
+
 
     private static void drawWatermarkBackground(Canvas canvas, int x, int y, int width, int height) {
         Paint backgroundPaint = new Paint();
@@ -191,48 +196,68 @@ public class WatermarkUtils {
         return addWatermarkWithContext(null, originalBitmap, latitude, longitude, null, System.currentTimeMillis());
     }
 
+    public static Bitmap addSimpleCoordinatesWatermarkWithContext(Context context, Bitmap originalBitmap,
+                                                                  double latitude, double longitude) {
+        return addSimpleCoordinatesWatermarkWithContext(context, originalBitmap, latitude, longitude, null);
+    }
+
     public static Bitmap addSimpleCoordinatesWatermark(Bitmap originalBitmap, double latitude, double longitude) {
-        return addSimpleCoordinatesWatermarkWithContext(null, originalBitmap, latitude, longitude);
+        return addSimpleCoordinatesWatermarkWithContext(null, originalBitmap, latitude, longitude, null);
     }
 
     public static Bitmap addSimpleCoordinatesWatermarkWithContext(Context context, Bitmap originalBitmap,
-                                                                  double latitude, double longitude) {
+                                                                  double latitude, double longitude, Double altitude) {
         if (originalBitmap == null) {
             Log.e(TAG, "Original bitmap is null");
             return null;
         }
 
         try {
+            // Create a mutable copy of the bitmap
             Bitmap watermarkedBitmap = originalBitmap.copy(Bitmap.Config.ARGB_8888, true);
             Canvas canvas = new Canvas(watermarkedBitmap);
 
+            // Calculate text size based on image dimensions
             int textSize = calculateTextSize(watermarkedBitmap.getWidth());
             int iconSize = calculateIconSize(textSize);
 
+            // Create paint for text
             Paint textPaint = createTextPaint(textSize);
             Paint shadowPaint = createShadowPaint(textSize);
 
+            // Format coordinates
             String coordinates = String.format(Locale.US, "%.6f, %.6f", latitude, longitude);
+            if (altitude != null && altitude != 0) {
+                coordinates += String.format(Locale.US, " (%.0fm)", altitude);
+            }
 
+            // Calculate text dimensions
             Rect textBounds = new Rect();
             textPaint.getTextBounds(coordinates, 0, coordinates.length(), textBounds);
 
+            // Calculate total watermark dimensions
             int totalWidth = (context != null ? iconSize + ICON_TEXT_SPACING : 0) + textBounds.width();
             int totalHeight = Math.max(iconSize, textBounds.height());
 
+            // Calculate watermark position (TOP-LEFT corner)
             int watermarkX = WATERMARK_PADDING;
             int watermarkY = WATERMARK_PADDING + textBounds.height();
 
+            // Draw semi-transparent background
             drawWatermarkBackground(canvas, watermarkX - 10, watermarkY - textBounds.height() - 10,
                     totalWidth + 20, totalHeight + 20);
 
+            // Draw camera icon if context is available
             if (context != null) {
                 drawWatermarkIcon(context, canvas, watermarkX, watermarkY - textBounds.height(), iconSize);
             }
 
+            // Calculate text position
             int textX = watermarkX + (context != null ? iconSize + ICON_TEXT_SPACING : 0);
 
+            // Draw shadow first
             canvas.drawText(coordinates, textX + 2, watermarkY + 2, shadowPaint);
+            // Draw main text
             canvas.drawText(coordinates, textX, watermarkY, textPaint);
 
             Log.d(TAG, "Simple coordinates watermark with icon added successfully at top-left position");
@@ -240,7 +265,7 @@ public class WatermarkUtils {
 
         } catch (Exception e) {
             Log.e(TAG, "Error adding simple coordinates watermark", e);
-            return originalBitmap;
+            return originalBitmap; // Return original if watermarking fails
         }
     }
 
