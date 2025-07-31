@@ -20,6 +20,7 @@ import com.example.locationcamera.database.AppDatabase;
 import com.example.locationcamera.databinding.ActivityPhotoDetailBinding;
 import com.example.locationcamera.model.PhotoLocation;
 import com.example.locationcamera.utils.PhotoMetadataUtils;
+import com.example.locationcamera.utils.GPSTimeUtils;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -107,9 +108,24 @@ public class PhotoDetailActivity extends AppCompatActivity {
                 binding.photoImageView.setImageResource(R.drawable.ic_image_error);
             }
 
-            // Display timestamp
+            // Display timestamp with time source information
             SimpleDateFormat sdf = new SimpleDateFormat("MMM dd, yyyy 'at' HH:mm", Locale.getDefault());
             String dateText = sdf.format(new Date(currentPhoto.getTimestamp()));
+
+            // Try to determine if this was GPS time by checking if it's different from creation time
+            // This is a best-effort approach since we don't store the time source in the database
+            File file = new File(currentPhoto.getPhotoPath());
+            if (file.exists()) {
+                long fileTime = file.lastModified();
+                long photoTime = currentPhoto.getTimestamp();
+                long timeDiff = Math.abs(fileTime - photoTime);
+
+                // If times are significantly different, it might be GPS time
+                if (timeDiff > 5000) { // More than 5 seconds difference
+                    dateText += " (GPS Time)";
+                }
+            }
+
             binding.dateText.setText(dateText);
 
             // Display location information
@@ -287,9 +303,25 @@ public class PhotoDetailActivity extends AppCompatActivity {
     private String createLocationDescription() {
         StringBuilder description = new StringBuilder();
 
-        // Add timestamp
+        // Add timestamp with potential GPS time indication
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
-        description.append("Captured: ").append(dateFormat.format(new Date(currentPhoto.getTimestamp()))).append("\n");
+        String timestamp = dateFormat.format(new Date(currentPhoto.getTimestamp()));
+
+        // Try to determine if this was GPS time
+        File file = new File(currentPhoto.getPhotoPath());
+        if (file.exists()) {
+            long fileTime = file.lastModified();
+            long photoTime = currentPhoto.getTimestamp();
+            long timeDiff = Math.abs(fileTime - photoTime);
+
+            if (timeDiff > 5000) { // More than 5 seconds difference suggests GPS time
+                description.append("Captured: ").append(timestamp).append(" (GPS Satellite Time)\n");
+            } else {
+                description.append("Captured: ").append(timestamp).append("\n");
+            }
+        } else {
+            description.append("Captured: ").append(timestamp).append("\n");
+        }
 
         // Add coordinates if available
         if (currentPhoto.getLatitude() != 0 && currentPhoto.getLongitude() != 0) {
