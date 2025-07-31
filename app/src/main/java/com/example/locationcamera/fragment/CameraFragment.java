@@ -534,8 +534,12 @@ public class CameraFragment extends Fragment {
                             currentLocation.getLatitude(),
                             currentLocation.getLongitude(),
                             address,
+<<<<<<< HEAD
                             gpsTimestamp,
                             currentLocation
+=======
+                            System.currentTimeMillis()
+>>>>>>> bcc18ad8a9271bec8a217c3c0da9bdf1ef8c140d
                     );
                     Log.d(TAG, "Location and GPS time metadata saved to photo: " + metadataSuccess +
                             ", time source: " + GPSTimeUtils.getTimeSourceDescription(currentLocation));
