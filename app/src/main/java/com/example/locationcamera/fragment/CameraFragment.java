@@ -529,21 +529,21 @@ public class CameraFragment extends Fragment {
                 if (currentLocation != null) {
                     // Use GPS satellite time for metadata
                     long gpsTimestamp = GPSTimeUtils.getAccurateTimestamp(currentLocation);
-                    boolean metadataSuccess = PhotoMetadataUtils.savePhotoWithLocationMetadata(
-                            originalPhotoPath,
+                    watermarkedBitmap = WatermarkUtils.addWatermarkWithContext(
+                            requireContext(),
+                            originalBitmap,
                             currentLocation.getLatitude(),
                             currentLocation.getLongitude(),
                             address,
-<<<<<<< HEAD
                             gpsTimestamp,
+                            altitude,
                             currentLocation
-=======
-                            System.currentTimeMillis()
->>>>>>> bcc18ad8a9271bec8a217c3c0da9bdf1ef8c140d
                     );
-                    Log.d(TAG, "Location and GPS time metadata saved to photo: " + metadataSuccess +
+                    Log.d(TAG, "Watermark with icon added with location: " +
+                            currentLocation.getLatitude() + ", " + currentLocation.getLongitude() +
+                            (altitude != null ? ", altitude: " + altitude + "m" : "") +
                             ", time source: " + GPSTimeUtils.getTimeSourceDescription(currentLocation));
-                } else {
+                }  else {
                     Log.w(TAG, "No location available for metadata");
                 }
 
