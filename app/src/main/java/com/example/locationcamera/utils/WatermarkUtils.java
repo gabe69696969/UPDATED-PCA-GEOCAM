@@ -11,7 +11,14 @@ import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
 import android.util.Log;
 import androidx.core.content.ContextCompat;
+<<<<<<< HEAD
 import androidx.vectordrawable.graphics.drawable.VectorDrawableCompat;
+<<<<<<< HEAD
+=======
+
+=======
+>>>>>>> bcc18ad8a9271bec8a217c3c0da9bdf1ef8c140d
+>>>>>>> parent of 65c0cc0 (fix)
 import com.example.locationcamera.R;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -24,6 +31,7 @@ public class WatermarkUtils {
     private static final String TAG = "WatermarkUtils";
     private static final int WATERMARK_PADDING = 20;
     private static final int LINE_SPACING = 8;
+<<<<<<< HEAD
     private static final int ICON_TEXT_SPACING = 12; // Space between icon and text
     private static final float TEXT_SIZE_RATIO = 0.025f; // 2.5% of image width
     private static final int MIN_TEXT_SIZE = 24;
@@ -33,6 +41,20 @@ public class WatermarkUtils {
 =======
     private static final int ICON_SIZE_RATIO = 32; // Base icon size
 >>>>>>> parent of 902dc8f (Satellite date and time)
+=======
+    private static final int ICON_TEXT_SPACING = 12;
+<<<<<<< HEAD
+    private static final float TEXT_SIZE_RATIO = 0.025f;
+    private static final int MIN_TEXT_SIZE = 24;
+    private static final int MAX_TEXT_SIZE = 48;
+    private static final int ICON_SIZE_RATIO = 48; // Updated from 32 to 36
+=======
+    private static final float TEXT_SIZE_RATIO = 0.045f; // Increased by 50%
+    private static final int MIN_TEXT_SIZE = 75; // Increased by 50%
+    private static final int MAX_TEXT_SIZE = 75; // Increased by 50%
+    private static final int ICON_SIZE_RATIO = 48; // Increased by 50%
+>>>>>>> bcc18ad8a9271bec8a217c3c0da9bdf1ef8c140d
+>>>>>>> parent of 65c0cc0 (fix)
 
     // Overloaded method for backward compatibility
     public static Bitmap addWatermarkWithContext(Context context, Bitmap originalBitmap,
@@ -68,10 +90,17 @@ public class WatermarkUtils {
             Paint shadowPaint = createShadowPaint(textSize);
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
             // Prepare watermark text lines
 >>>>>>> 8b82bdf2383a466e94e2594b2d321e0b14d6a7d1
             String[] watermarkLines = prepareWatermarkText(latitude, longitude, address, timestamp, altitude);
+=======
+            String[] watermarkLines = prepareWatermarkText(latitude, longitude, address, timestamp, altitude, location);
+=======
+            String[] watermarkLines = prepareWatermarkText(latitude, longitude, address, timestamp, altitude);
+>>>>>>> bcc18ad8a9271bec8a217c3c0da9bdf1ef8c140d
+>>>>>>> parent of 65c0cc0 (fix)
 
             // Calculate text dimensions
             Rect textBounds = new Rect();
@@ -109,12 +138,17 @@ public class WatermarkUtils {
             for (String line : watermarkLines) {
                 textPaint.getTextBounds(line, 0, line.length(), textBounds);
                 currentY += textBounds.height();
+<<<<<<< HEAD
 
+<<<<<<< HEAD
                 // Draw shadow first
+=======
+=======
+>>>>>>> bcc18ad8a9271bec8a217c3c0da9bdf1ef8c140d
+>>>>>>> parent of 65c0cc0 (fix)
                 canvas.drawText(line, textStartX + 2, currentY + 2, shadowPaint);
                 // Draw main text
                 canvas.drawText(line, textStartX, currentY, textPaint);
-
                 currentY += LINE_SPACING;
             }
 
@@ -154,8 +188,15 @@ public class WatermarkUtils {
     }
 
     private static int calculateIconSize(int textSize) {
+<<<<<<< HEAD
         // Icon size should be proportional to text size
+=======
+<<<<<<< HEAD
+>>>>>>> parent of 65c0cc0 (fix)
         return Math.max(ICON_SIZE_RATIO, (int) (textSize * 1.2f));
+=======
+        return Math.max(ICON_SIZE_RATIO, (int) (textSize * 2f));
+>>>>>>> bcc18ad8a9271bec8a217c3c0da9bdf1ef8c140d
     }
 
     private static Paint createTextPaint(int textSize) {
@@ -307,9 +348,20 @@ public class WatermarkUtils {
         }
     }
 
+<<<<<<< HEAD
     /**
      * Saves a bitmap to a file
      */
+=======
+<<<<<<< HEAD
+    public static Bitmap addSimpleCoordinatesWatermarkWithContext(Context context, Bitmap originalBitmap,
+                                                                  double latitude, double longitude, Double altitude) {
+        return addSimpleCoordinatesWatermarkWithContext(context, originalBitmap, latitude, longitude, altitude, null);
+    }
+
+=======
+>>>>>>> bcc18ad8a9271bec8a217c3c0da9bdf1ef8c140d
+>>>>>>> parent of 65c0cc0 (fix)
     public static boolean saveBitmapToFile(Bitmap bitmap, String filePath) {
         if (bitmap == null || filePath == null) {
             Log.e(TAG, "Bitmap or file path is null");
@@ -340,4 +392,12 @@ public class WatermarkUtils {
             }
         }
     }
+<<<<<<< HEAD
 }
+=======
+}
+<<<<<<< HEAD
+=======
+
+>>>>>>> bcc18ad8a9271bec8a217c3c0da9bdf1ef8c140d
+>>>>>>> parent of 65c0cc0 (fix)

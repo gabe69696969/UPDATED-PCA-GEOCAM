@@ -2,18 +2,30 @@ package com.example.locationcamera.utils;
 
 import android.content.ContentResolver;
 import android.content.ContentValues;
+<<<<<<< HEAD
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+=======
+<<<<<<< HEAD
+>>>>>>> parent of 65c0cc0 (fix)
 import android.location.Location;
+=======
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+>>>>>>> bcc18ad8a9271bec8a217c3c0da9bdf1ef8c140d
 import android.media.ExifInterface;
 import android.net.Uri;
 import android.os.Build;
 import android.provider.MediaStore;
 import android.util.Log;
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 import java.io.File;
 >>>>>>> parent of 902dc8f (Satellite date and time)
+=======
+
+>>>>>>> parent of 65c0cc0 (fix)
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
@@ -29,13 +41,18 @@ public class PhotoMetadataUtils {
      */
     public static boolean savePhotoWithLocationMetadata(String photoPath, double latitude,
                                                         double longitude, String address,
-                                                        long timestamp, Location location) {
+                                                        long timestamp) {
         try {
             // First, add EXIF location data to the photo file
-            boolean exifSuccess = addLocationToExif(photoPath, latitude, longitude, location);
+            boolean exifSuccess = addLocationToExif(photoPath, latitude, longitude);
 
             // Create description with coordinates and timestamp
-            String description = createLocationDescription(latitude, longitude, address, timestamp, location);
+<<<<<<< HEAD
+            long accurateTimestamp = GPSTimeUtils.getAccurateTimestamp(location);
+            String description = createLocationDescription(latitude, longitude, address, accurateTimestamp, location);
+=======
+            String description = createLocationDescription(latitude, longitude, address, timestamp);
+>>>>>>> bcc18ad8a9271bec8a217c3c0da9bdf1ef8c140d
 
             // Add description to file metadata
             boolean descriptionSuccess = addDescriptionToFile(photoPath, description);
@@ -49,19 +66,11 @@ public class PhotoMetadataUtils {
         }
     }
 
-    /**
-     * Overloaded method for backward compatibility
-     */
-    public static boolean savePhotoWithLocationMetadata(String photoPath, double latitude,
-                                                        double longitude, String address,
-                                                        long timestamp) {
-        return savePhotoWithLocationMetadata(photoPath, latitude, longitude, address, timestamp, null);
-    }
 
     /**
      * Adds GPS coordinates to EXIF data of the photo
      */
-    private static boolean addLocationToExif(String photoPath, double latitude, double longitude, Location location) {
+    private static boolean addLocationToExif(String photoPath, double latitude, double longitude) {
         try {
             ExifInterface exif = new ExifInterface(photoPath);
 
@@ -85,11 +94,13 @@ public class PhotoMetadataUtils {
 
             // Set additional GPS EXIF data
             exif.setAttribute(ExifInterface.TAG_GPS_PROCESSING_METHOD, "GPS");
+<<<<<<< HEAD
 
-            // Use GPS time if available from location, otherwise current time
+            // Use accurate GPS satellite time
             if (location != null) {
-                exif.setAttribute(ExifInterface.TAG_GPS_TIMESTAMP, getGPSTimeStamp(location));
-                exif.setAttribute(ExifInterface.TAG_GPS_DATESTAMP, getGPSDateStamp(location));
+                // Use GPS satellite time in UTC (standard for GPS)
+                exif.setAttribute(ExifInterface.TAG_GPS_TIMESTAMP, GPSTimeUtils.getGPSTimeUTCForExif(location));
+                exif.setAttribute(ExifInterface.TAG_GPS_DATESTAMP, GPSTimeUtils.getGPSDateUTCForExif(location));
 
                 // Add GPS accuracy and provider information
                 if (location.hasAccuracy()) {
@@ -103,19 +114,15 @@ public class PhotoMetadataUtils {
                 if (provider != null) {
                     exif.setAttribute(ExifInterface.TAG_GPS_PROCESSING_METHOD, provider.toUpperCase());
                 }
-
-                // Add altitude if available
-                if (location.hasAltitude()) {
-                    double altitude = location.getAltitude();
-                    String altitudeRef = altitude >= 0 ? "0" : "1"; // 0 = above sea level, 1 = below
-                    String altitudeDMS = String.format(Locale.US, "%.0f/1", Math.abs(altitude));
-                    exif.setAttribute(ExifInterface.TAG_GPS_ALTITUDE, altitudeDMS);
-                    exif.setAttribute(ExifInterface.TAG_GPS_ALTITUDE_REF, altitudeRef);
-                }
             } else {
-                exif.setAttribute(ExifInterface.TAG_GPS_TIMESTAMP, getCurrentTimeStamp());
-                exif.setAttribute(ExifInterface.TAG_GPS_DATESTAMP, getCurrentDateStamp());
+                // Fallback to system time in UTC
+                exif.setAttribute(ExifInterface.TAG_GPS_TIMESTAMP, GPSTimeUtils.getGPSTimeUTCForExif(null));
+                exif.setAttribute(ExifInterface.TAG_GPS_DATESTAMP, GPSTimeUtils.getGPSDateUTCForExif(null));
             }
+=======
+            exif.setAttribute(ExifInterface.TAG_GPS_TIMESTAMP, getCurrentTimeStamp());
+            exif.setAttribute(ExifInterface.TAG_GPS_DATESTAMP, getCurrentDateStamp());
+>>>>>>> bcc18ad8a9271bec8a217c3c0da9bdf1ef8c140d
 
             // Save EXIF data
             exif.saveAttributes();
@@ -147,66 +154,59 @@ public class PhotoMetadataUtils {
      * Creates a formatted description with location information
      */
     private static String createLocationDescription(double latitude, double longitude,
-                                                    String address, long timestamp, Location location) {
+                                                    String address, long timestamp) {
         StringBuilder description = new StringBuilder();
 
-        // Add timestamp - use GPS time if available
+<<<<<<< HEAD
+        // Add timestamp information with source
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
-        if (location != null && location.getTime() > 0) {
-            description.append("GPS Time: ").append(dateFormat.format(new Date(location.getTime()))).append("\n");
-            description.append("Captured: ").append(dateFormat.format(new Date(timestamp))).append("\n");
+
+        // Use the accurate timestamp (GPS time if available)
+        long accurateTimestamp = GPSTimeUtils.getAccurateTimestamp(location);
+        String timeSource = GPSTimeUtils.getTimeSourceDescription(location);
+
+        description.append("Captured: ").append(dateFormat.format(new Date(accurateTimestamp))).append("\n");
+        description.append("Time Source: ").append(timeSource).append("\n");
+
+        // Add GPS time details if available
+        if (GPSTimeUtils.hasValidGPSTime(location)) {
+            SimpleDateFormat utcFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss 'UTC'", Locale.getDefault());
+            utcFormat.setTimeZone(java.util.TimeZone.getTimeZone("UTC"));
+            description.append("GPS UTC Time: ").append(utcFormat.format(new Date(location.getTime()))).append("\n");
         } else {
-            description.append("Captured: ").append(dateFormat.format(new Date(timestamp))).append("\n");
+            description.append("GPS Time: Not available\n");
         }
+=======
+        // Add timestamp
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
+        description.append("Captured: ").append(dateFormat.format(new Date(timestamp))).append("\n");
+>>>>>>> bcc18ad8a9271bec8a217c3c0da9bdf1ef8c140d
 
         // Add coordinates
         description.append("Coordinates: ").append(String.format(Locale.US, "%.6f, %.6f", latitude, longitude)).append("\n");
-
-        // Add GPS provider and accuracy information
-        if (location != null) {
-            String provider = location.getProvider();
-            if (provider != null) {
-                description.append("Source: ").append(provider.toUpperCase()).append("\n");
-            }
-
-            if (location.hasAccuracy()) {
-                description.append("Accuracy: ±").append(String.format(Locale.US, "%.1f", location.getAccuracy())).append("m\n");
-            }
-
-            if (location.hasAltitude()) {
-                description.append("Altitude: ").append(String.format(Locale.US, "%.1f", location.getAltitude())).append("m\n");
-            }
-
-            if (location.hasSpeed()) {
-                description.append("Speed: ").append(String.format(Locale.US, "%.1f", location.getSpeed())).append(" m/s\n");
-            }
-
-            if (location.hasBearing()) {
-                description.append("Bearing: ").append(String.format(Locale.US, "%.1f", location.getBearing())).append("°\n");
-            }
-        }
 
         // Add address if available
         if (address != null && !address.isEmpty() && !address.equals("Location unavailable")) {
             description.append("Location: ").append(address).append("\n");
         }
 
+<<<<<<< HEAD
         // Add final note
+<<<<<<< HEAD
 <<<<<<< HEAD
         description.append("GPS Location Data Embedded by LocationCamera");
 =======
         description.append("Satellite GPS Location Data Embedded");
 >>>>>>> parent of 902dc8f (Satellite date and time)
+=======
+        description.append("Satellite GPS Location and Time Data Embedded");
+=======
+        // Add accuracy note
+        description.append("GPS Location Data Embedded");
+>>>>>>> bcc18ad8a9271bec8a217c3c0da9bdf1ef8c140d
+>>>>>>> parent of 65c0cc0 (fix)
 
         return description.toString();
-    }
-
-    /**
-     * Overloaded method for backward compatibility
-     */
-    private static String createLocationDescription(double latitude, double longitude,
-                                                    String address, long timestamp) {
-        return createLocationDescription(latitude, longitude, address, timestamp, null);
     }
 
     /**
@@ -222,13 +222,10 @@ public class PhotoMetadataUtils {
             // Set image description
             exif.setAttribute(ExifInterface.TAG_IMAGE_DESCRIPTION, description);
 
-            // Set software tag to identify our app
-            exif.setAttribute(ExifInterface.TAG_SOFTWARE, "LocationCamera Android App");
-
             // Save EXIF data
             exif.saveAttributes();
 
-            Log.d(TAG, "Photo description saved successfully");
+            Log.d(TAG, "Photo description saved successfully: " + description);
             return true;
 
         } catch (IOException e) {
@@ -250,12 +247,15 @@ public class PhotoMetadataUtils {
             // Create content values for MediaStore
             ContentValues contentValues = new ContentValues();
 
+            // Use accurate timestamp for MediaStore
+            long accurateTimestamp = timestamp; // This should already be the GPS time from the calling method
+
             // Basic file information
-            String fileName = "LocationCamera_" + timestamp + ".jpg";
+            String fileName = "LocationCamera_" + accurateTimestamp + ".jpg";
             contentValues.put(MediaStore.MediaColumns.DISPLAY_NAME, fileName);
             contentValues.put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg");
-            contentValues.put(MediaStore.MediaColumns.DATE_ADDED, timestamp / 1000);
-            contentValues.put(MediaStore.MediaColumns.DATE_MODIFIED, timestamp / 1000);
+            contentValues.put(MediaStore.MediaColumns.DATE_ADDED, accurateTimestamp / 1000);
+            contentValues.put(MediaStore.MediaColumns.DATE_MODIFIED, accurateTimestamp / 1000);
 
             // Add location data to MediaStore
             if (latitude != 0 && longitude != 0) {
@@ -264,7 +264,7 @@ public class PhotoMetadataUtils {
             }
 
             // Create description with location information
-            String description = createLocationDescription(latitude, longitude, address, timestamp);
+            String description = createLocationDescription(latitude, longitude, address, accurateTimestamp);
 
             // Add description to MediaStore (Android 10+)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -323,48 +323,16 @@ public class PhotoMetadataUtils {
             // Read timestamp
             String dateTime = exif.getAttribute(ExifInterface.TAG_DATETIME);
 
-            // Read GPS timestamp
-            String gpsTimestamp = exif.getAttribute(ExifInterface.TAG_GPS_TIMESTAMP);
-            String gpsDatestamp = exif.getAttribute(ExifInterface.TAG_GPS_DATESTAMP);
-
-            // Read altitude
-            String altitudeString = exif.getAttribute(ExifInterface.TAG_GPS_ALTITUDE);
-            String altitudeRef = exif.getAttribute(ExifInterface.TAG_GPS_ALTITUDE_REF);
-
             LocationMetadata metadata = new LocationMetadata();
             if (hasGPS) {
                 metadata.latitude = latLong[0];
                 metadata.longitude = latLong[1];
                 metadata.hasLocation = true;
-
-                // Parse altitude if available
-                if (altitudeString != null) {
-                    try {
-                        // Altitude is stored as a rational number (e.g., "123/1")
-                        String[] parts = altitudeString.split("/");
-                        if (parts.length == 2) {
-                            double altitude = Double.parseDouble(parts[0]) / Double.parseDouble(parts[1]);
-                            // Check if below sea level
-                            if ("1".equals(altitudeRef)) {
-                                altitude = -altitude;
-                            }
-                            metadata.altitude = altitude;
-                            metadata.hasAltitude = true;
-                        }
-                    } catch (NumberFormatException e) {
-                        Log.w(TAG, "Error parsing altitude from EXIF", e);
-                    }
-                }
             }
-
             metadata.description = description;
             metadata.dateTime = dateTime;
-            metadata.gpsTimestamp = gpsTimestamp;
-            metadata.gpsDatestamp = gpsDatestamp;
 
-            Log.d(TAG, "Location metadata read - GPS: " + hasGPS +
-                    ", Description: " + (description != null) +
-                    ", Altitude: " + metadata.hasAltitude);
+            Log.d(TAG, "Location metadata read - GPS: " + hasGPS + ", Description: " + (description != null));
             return metadata;
 
         } catch (IOException e) {
@@ -374,6 +342,8 @@ public class PhotoMetadataUtils {
     }
 
     /**
+<<<<<<< HEAD
+=======
      * Gets current timestamp for EXIF
      */
     private static String getCurrentTimeStamp() {
@@ -382,7 +352,7 @@ public class PhotoMetadataUtils {
         // Use GPS time if available, otherwise system time
 >>>>>>> parent of 902dc8f (Satellite date and time)
         SimpleDateFormat timeFormat = new SimpleDateFormat("HH:mm:ss", Locale.getDefault());
-        return timeFormat.format(new Date(System.currentTimeMillis()));
+        return timeFormat.format(new Date());
     }
 
     /**
@@ -394,6 +364,7 @@ public class PhotoMetadataUtils {
         // Use GPS time if available, otherwise system time
 >>>>>>> parent of 902dc8f (Satellite date and time)
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy:MM:dd", Locale.getDefault());
+<<<<<<< HEAD
         return dateFormat.format(new Date(System.currentTimeMillis()));
     }
 
@@ -477,30 +448,20 @@ public class PhotoMetadataUtils {
     /**
 =======
 >>>>>>> parent of 902dc8f (Satellite date and time)
+=======
+        return dateFormat.format(new Date());
+    }
+
+    /**
+>>>>>>> bcc18ad8a9271bec8a217c3c0da9bdf1ef8c140d
+>>>>>>> parent of 65c0cc0 (fix)
      * Data class for location metadata
      */
     public static class LocationMetadata {
         public double latitude = 0;
         public double longitude = 0;
-        public double altitude = 0;
         public boolean hasLocation = false;
-        public boolean hasAltitude = false;
         public String description = null;
         public String dateTime = null;
-        public String gpsTimestamp = null;
-        public String gpsDatestamp = null;
-
-        @Override
-        public String toString() {
-            return "LocationMetadata{" +
-                    "latitude=" + latitude +
-                    ", longitude=" + longitude +
-                    ", altitude=" + altitude +
-                    ", hasLocation=" + hasLocation +
-                    ", hasAltitude=" + hasAltitude +
-                    ", description='" + description + '\'' +
-                    ", dateTime='" + dateTime + '\'' +
-                    '}';
-        }
     }
 }
