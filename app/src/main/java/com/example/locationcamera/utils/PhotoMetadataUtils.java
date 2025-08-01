@@ -2,12 +2,18 @@ package com.example.locationcamera.utils;
 
 import android.content.ContentResolver;
 import android.content.ContentValues;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.location.Location;
 import android.media.ExifInterface;
 import android.net.Uri;
 import android.os.Build;
 import android.provider.MediaStore;
 import android.util.Log;
+<<<<<<< HEAD
+=======
+import java.io.File;
+>>>>>>> parent of 902dc8f (Satellite date and time)
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
@@ -186,7 +192,11 @@ public class PhotoMetadataUtils {
         }
 
         // Add final note
+<<<<<<< HEAD
         description.append("GPS Location Data Embedded by LocationCamera");
+=======
+        description.append("Satellite GPS Location Data Embedded");
+>>>>>>> parent of 902dc8f (Satellite date and time)
 
         return description.toString();
     }
@@ -367,6 +377,10 @@ public class PhotoMetadataUtils {
      * Gets current timestamp for EXIF
      */
     private static String getCurrentTimeStamp() {
+<<<<<<< HEAD
+=======
+        // Use GPS time if available, otherwise system time
+>>>>>>> parent of 902dc8f (Satellite date and time)
         SimpleDateFormat timeFormat = new SimpleDateFormat("HH:mm:ss", Locale.getDefault());
         return timeFormat.format(new Date(System.currentTimeMillis()));
     }
@@ -375,6 +389,10 @@ public class PhotoMetadataUtils {
      * Gets current date stamp for EXIF
      */
     private static String getCurrentDateStamp() {
+<<<<<<< HEAD
+=======
+        // Use GPS time if available, otherwise system time
+>>>>>>> parent of 902dc8f (Satellite date and time)
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy:MM:dd", Locale.getDefault());
         return dateFormat.format(new Date(System.currentTimeMillis()));
     }
@@ -382,7 +400,11 @@ public class PhotoMetadataUtils {
     /**
      * Gets GPS-based timestamp if location has time information
      */
+<<<<<<< HEAD
     public static String getGPSTimeStamp(Location location) {
+=======
+    private static String getGPSTimeStamp(Location location) {
+>>>>>>> parent of 902dc8f (Satellite date and time)
         if (location != null && location.getTime() > 0) {
             SimpleDateFormat timeFormat = new SimpleDateFormat("HH:mm:ss", Locale.getDefault());
             return timeFormat.format(new Date(location.getTime()));
@@ -393,7 +415,11 @@ public class PhotoMetadataUtils {
     /**
      * Gets GPS-based date stamp if location has time information
      */
+<<<<<<< HEAD
     public static String getGPSDateStamp(Location location) {
+=======
+    private static String getGPSDateStamp(Location location) {
+>>>>>>> parent of 902dc8f (Satellite date and time)
         if (location != null && location.getTime() > 0) {
             SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy:MM:dd", Locale.getDefault());
             return dateFormat.format(new Date(location.getTime()));
@@ -402,6 +428,7 @@ public class PhotoMetadataUtils {
     }
 
     /**
+<<<<<<< HEAD
      * Validates if a photo file has valid GPS metadata
      */
     public static boolean hasValidGPSMetadata(String photoPath) {
@@ -448,6 +475,8 @@ public class PhotoMetadataUtils {
     }
 
     /**
+=======
+>>>>>>> parent of 902dc8f (Satellite date and time)
      * Data class for location metadata
      */
     public static class LocationMetadata {
